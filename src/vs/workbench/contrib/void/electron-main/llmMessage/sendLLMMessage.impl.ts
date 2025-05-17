@@ -68,7 +68,7 @@ const parseHeadersJSON = (s: string | undefined): Record<string, string | null |
 	}
 }
 
-const newOpenAICompatibleSDK = async ({ settingsOfProvider, providerName, includeInPayload }: { settingsOfProvider: SettingsOfProvider, providerName: ProviderName, includeInPayload?: { [s: string]: any } }) => {
+const newOpenAICompatibleSDK = async ({ settingsOfProvider, providerName, includeInPayload, providerId }: { settingsOfProvider: SettingsOfProvider, providerName: ProviderName, includeInPayload?: { [s: string]: any }, providerId?: string }) => {
 	const commonPayloadOpts: ClientOptions = {
 		dangerouslyAllowBrowser: true,
 		...includeInPayload,
@@ -127,9 +127,20 @@ const newOpenAICompatibleSDK = async ({ settingsOfProvider, providerName, includ
 		return new OpenAI({ baseURL: 'https://api.deepseek.com/v1', apiKey: thisConfig.apiKey, ...commonPayloadOpts })
 	}
 	else if (providerName === 'openAICompatible') {
-		const thisConfig = settingsOfProvider[providerName]
-		const headers = parseHeadersJSON(thisConfig.headersJSON)
-		return new OpenAI({ baseURL: thisConfig.endpoint, apiKey: thisConfig.apiKey, defaultHeaders: headers, ...commonPayloadOpts })
+		const thisConfig = settingsOfProvider[providerName] 
+		
+		if (providerId) {
+			// 查找指定的提供商
+			const provider = thisConfig.providers.find(p => p.id === providerId)
+			if (!provider) {
+				throw new Error(`OpenAI Compatible provider with ID ${providerId} not found`)
+			}
+			const headers = parseHeadersJSON(provider.headersJSON)
+			return new OpenAI({ baseURL: provider.endpoint, apiKey: provider.apiKey, defaultHeaders: headers, ...commonPayloadOpts })
+		} else {
+			// 要求提供 providerId
+			throw new Error('OpenAI Compatible provider requires a providerId')
+		}
 	}
 	else if (providerName === 'groq') {
 		const thisConfig = settingsOfProvider[providerName]
@@ -164,7 +175,7 @@ const _sendOpenAICompatibleFIM = async ({ messages: { prefix, suffix, stopTokens
 		return
 	}
 
-	const openai = await newOpenAICompatibleSDK({ providerName, settingsOfProvider, includeInPayload: additionalOpenAIPayload })
+	const openai = await newOpenAICompatibleSDK({ providerName, settingsOfProvider, includeInPayload: additionalOpenAIPayload, providerId })
 	openai.completions
 		.create({
 			model: modelName,
@@ -364,7 +375,7 @@ type OpenAIModel = {
 	object: 'model';
 	owned_by: string;
 }
-const _openaiCompatibleList = async ({ onSuccess: onSuccess_, onError: onError_, settingsOfProvider, providerName }: ListParams_Internal<OpenAIModel>) => {
+const _openaiCompatibleList = async ({ onSuccess: onSuccess_, onError: onError_, settingsOfProvider, providerName, providerId }: ListParams_Internal<OpenAIModel> & { providerId?: string }) => {
 	const onSuccess = ({ models }: { models: OpenAIModel[] }) => {
 		onSuccess_({ models })
 	}
@@ -372,7 +383,7 @@ const _openaiCompatibleList = async ({ onSuccess: onSuccess_, onError: onError_,
 		onError_({ error })
 	}
 	try {
-		const openai = await newOpenAICompatibleSDK({ providerName, settingsOfProvider })
+	const openai = await newOpenAICompatibleSDK({ providerName, settingsOfProvider, providerId })
 		openai.models.list()
 			.then(async (response) => {
 				const models: OpenAIModel[] = []

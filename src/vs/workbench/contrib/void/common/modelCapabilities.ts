@@ -28,10 +28,7 @@ export const defaultProviderSettings = {
 	openRouter: {
 		apiKey: '',
 	},
-	openAICompatible: {
-		endpoint: '',
-		apiKey: '',
-		headersJSON: '{}', // default to {}
+	openAICompatible: { // 移除单一提供商配置
 	},
 	gemini: {
 		apiKey: '',
@@ -1136,6 +1133,8 @@ const openaiCompatible: VoidStaticProviderInfo = {
 		// reasoning: we have no idea what endpoint they used, so we can't consistently parse out reasoning
 		input: { includeInPayload: openAICompatIncludeInPayloadReasoning },
 	},
+	// 支持多个提供商的情况下发送信息
+	multiProviderSupport: true,
 }
 
 const liteLLMSettings: VoidStaticProviderInfo = { // https://docs.litellm.ai/docs/reasoning_content

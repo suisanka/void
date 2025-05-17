@@ -42,7 +42,21 @@ type CommonProviderSettings = {
 	models: VoidStatefulModelInfo[],
 }
 
-export type SettingsAtProvider<providerName extends ProviderName> = CustomProviderSettings<providerName> & CommonProviderSettings
+// 支持多个自定义 OpenAI 兼容提供商
+export type OpenAICompatibleProvider = {
+	id: string;
+	name: string;
+	endpoint: string;
+	apiKey: string;
+	headersJSON: string;
+}
+
+export type SettingsAtProvider<providerName extends ProviderName> = 
+	providerName extends 'openAICompatible' 
+		? CommonProviderSettings & {
+			providers: OpenAICompatibleProvider[];
+		} 
+		: CustomProviderSettings<providerName> & CommonProviderSettings
 
 // part of state
 export type SettingsOfProvider = {
@@ -237,6 +251,14 @@ const defaultCustomSettings: Record<CustomSettingName, undefined> = {
 	headersJSON: undefined,
 }
 
+const defaultOpenAICompatibleProvider: OpenAICompatibleProvider = {
+	id: '',
+	name: '',
+	endpoint: '',
+	apiKey: '',
+	headersJSON: '{}'
+} 
+
 
 const modelInfoOfDefaultModelNames = (defaultModelNames: string[]): { models: VoidStatefulModelInfo[] } => {
 	return {
@@ -315,6 +337,7 @@ export const defaultSettingsOfProvider: SettingsOfProvider = {
 		...defaultProviderSettings.openAICompatible,
 		...modelInfoOfDefaultModelNames(defaultModelsOfProvider.openAICompatible),
 		_didFillInProviderSettings: undefined,
+		providers: [],
 	},
 	ollama: { // aggregator (serves models from multiple providers)
 		...defaultCustomSettings,
